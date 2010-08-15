@@ -1,0 +1,69 @@
+#!/usr/bin/env php
+<?php
+
+// usage check
+if ($argc < 2) {
+  echo "too few arguments.\n";
+  echo "usage: twitter.php -mode=MODE XXX\n";
+  exit(-1);
+}
+
+// mode=(post|mention|list)
+preg_match("/^-mode=(\w+)$/", $argv[1], $matches);
+if (2 == count($matches)) {
+  $mode = $matches[1];
+}
+
+// get a twitter object (with an OAuth authentication)
+require_once("twitteroauth.php");
+$conf = parse_ini_file(dirname(__FILE__) . "/twitter.ini", true);
+$to = new TwitterOAuth($conf["auth"]["consumer_key"],
+                       $conf["auth"]["consumer_secret"],
+                       $conf["auth"]["access_token"],
+                       $conf["auth"]["access_token_secret"]);
+
+if ("post" === $mode) {
+  if (preg_match("/^-to=(\d+)$/", $argv[2], $matches)) {
+    // in reply to ...
+    $req = $to->OAuthRequest("https://twitter.com/statuses/update.xml",
+                             "POST",
+                             array("in_reply_to_status_id" => (string)$matches[1],
+                                   "status" => $argv[3]));
+  } else {
+    $req = $to->OAuthRequest("https://twitter.com/statuses/update.xml",
+                             "POST",
+                             array("status" => $argv[2]));
+  }
+  echo "{$req}\n";
+} elseif ("list" === $mode) {
+  if (preg_match("/^-n=(\d+)$/", $argv[2], $matches)) {
+    $n = $matches[1];
+    $list = trim($argv[3]);
+  } else {
+    $n = 20;
+    $list = trim($argv[2]);
+  }
+
+  $req = $to->OAuthRequest(sprintf("http://api.twitter.com/1/%s/lists/%s/statuses.xml",
+                                   $conf["user"]["name"],
+                                   $list),
+                           "GET",
+                           array("per_page" => $n));
+
+  $xml = simplexml_load_string($req);
+  foreach ($xml->status as $status_) {
+    echo "{$status_->id}\t{$status_->user->screen_name}\t{$status_->text}\n";
+  }
+} elseif ("mention" === $mode) {
+  $req = $to->OAuthRequest("http://api.twitter.com/1/statuses/mentions.xml",
+                           "GET",
+                           array("count" => "20"));
+
+  $xml = simplexml_load_string($req);
+  foreach ($xml->status as $status_) {
+    echo "{$status_->id}\t{$status_->user->screen_name}\t{$status_->text}\n";
+  }
+} else {
+  echo "usage error.\n";
+}
+
