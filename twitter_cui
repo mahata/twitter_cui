@@ -40,7 +40,7 @@ if ("post" === $mode) {
     $n = $matches[1];
     $list = trim($argv[3]);
   } else {
-    $n = 20;
+    $n = 40;
     $list = trim($argv[2]);
   }
 
