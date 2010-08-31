@@ -23,6 +23,7 @@ $to = new TwitterOAuth($conf["auth"]["consumer_key"],
                        $conf["auth"]["access_token_secret"]);
 
 if ("post" === $mode) {
+  sleep(2);
   if (preg_match("/^-to=(\d+)$/", $argv[2], $matches)) {
     // in reply to ...
     $req = $to->OAuthRequest("https://twitter.com/statuses/update.xml",
